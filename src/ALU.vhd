@@ -40,13 +40,6 @@ entity ALU is
 end ALU;
 
 architecture Behavioral of ALU is
-    component ripple_adder is
-    Port ( A : in STD_LOGIC_VECTOR (7 downto 0);
-           B : in STD_LOGIC_VECTOR (7 downto 0);
-           Cin : in STD_LOGIC;
-           S : out STD_LOGIC_VECTOR (7 downto 0);
-           Cout : out STD_LOGIC);
-     end component ripple_adder;
      
     signal w_sum : STD_LOGIC_VECTOR (7 downto 0);
     signal w_Cout : std_logic;
@@ -57,16 +50,25 @@ architecture Behavioral of ALU is
     signal w_overflow : std_logic;
 
     begin
-       ripple_adder_inst : ripple_adder
-       port map (						  
-            A => i_A,
-            B => w_B,
-            Cin => i_op(0),
-            S => w_sum,
-            Cout => w_Cout
-        ); 
+
        with i_op(0) select
        w_B <= (not i_B) when '1', (i_B) when others;  
+
+       process(i_A, w_B, i_op)
+           variable v_carry : std_logic;
+           variable v_sum : std_logic_vector(7 downto 0);
+       begin
+           v_carry := i_op(0);
+
+           for i in 0 to 7 loop
+               v_sum(i) := i_A(i) xor w_B(i) xor v_carry;
+               v_carry := (i_A(i) and w_B(i)) or (i_A(i) and v_carry) or (w_B(i) and v_carry);
+           end loop;
+
+           w_sum <= v_sum;
+           w_Cout <= v_carry;
+       end process;
+
        with i_op(1 downto 0) select
        w_result <=(i_A or i_B) when "11", (i_A and i_B) when "10", w_sum when others;
        
