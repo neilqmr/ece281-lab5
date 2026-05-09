@@ -40,8 +40,62 @@ entity ALU is
 end ALU;
 
 architecture Behavioral of ALU is
+    component ripple_adder is
+    Port ( A : in STD_LOGIC_VECTOR (7 downto 0);
+           B : in STD_LOGIC_VECTOR (7 downto 0);
+           Cin : in STD_LOGIC;
+           S : out STD_LOGIC_VECTOR (7 downto 0);
+           Cout : out STD_LOGIC);
+     end component ripple_adder;
+     
+    signal w_sum : STD_LOGIC_VECTOR (7 downto 0);
+    signal w_Cout : std_logic;
+    signal w_B : STD_LOGIC_VECTOR (7 downto 0);
+    signal w_result: STD_LOGIC_VECTOR (7 downto 0);
+    signal w_and: STD_LOGIC_VECTOR (7 downto 0);
+    signal w_or: STD_LOGIC_VECTOR (7 downto 0);
+    signal w_overflow : std_logic;
 
-begin
-
-
+    begin
+       ripple_adder_inst : ripple_adder
+       port map (						  
+            A => i_A,
+            B => w_B,
+            Cin => i_op(0),
+            S => w_sum,
+            Cout => w_Cout
+        ); 
+       with i_op(0) select
+       w_B <= (not i_B) when '1', (i_B) when others;  
+       with i_op(1 downto 0) select
+       w_result <=(i_A or i_B) when "11", (i_A and i_B) when "10", w_sum when others;
+       
+       w_and <= i_A and i_B;
+       w_or <= i_A or i_B;
+       
+       
+       process(i_A, i_B, i_op, w_sum)
+       begin
+           w_overflow <= '0';
+           if i_op(1 downto 0) ="00" then
+           if(i_A(7) = i_B(7)) and (w_sum(7) /= i_A(7)) then           
+           w_overflow <= '1';
+           end if;
+           elsif i_op(1 downto 0) = "01" then 
+           if(i_A(7) /= i_B(7)) and (w_sum(7) /= i_A(7)) then
+           w_overflow <= '1';
+           end if;
+           end if;
+           end process;
+           o_result <= w_result;
+           
+           o_flags(3) <= w_result(7);
+           o_flags(2) <= '1' when w_result = "00000000" else '0';
+           o_flags(1) <= w_Cout when i_op(1) = '0' else '0';
+           o_flags(0) <= w_overflow;
+           
+           
+       
+    
+         
 end Behavioral;
